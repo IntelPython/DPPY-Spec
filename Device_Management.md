@@ -169,7 +169,7 @@ understanding some of the issues.
 
 ---
 
-## References
+# References
 
 <a name="ref1">[1]</a> https://www.tensorflow.org/guide/gpu#manual_device_placement
 
