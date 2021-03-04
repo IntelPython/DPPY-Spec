@@ -2,10 +2,9 @@
 
 This article surveys the state of the art of accelerator device programming
 (mostly CUDA) for existing Python packages and the proposed Python data API
-standard. After the survey a proposal for device management for DPPY packages is
-presented.
+standard.
 
-# Review : Computation Paradigms
+# Computation Paradigms
 
 Device management refers to how a Python package selects a SYCL device to use
 both for memory allocation and kernel submission. We first review device
@@ -129,16 +128,24 @@ possible deviations. A current or default device is not precluded by
 data-api standard semantics, and it up to libraries to decide what the default
 or global device selection strategy should be.
 
-# Review : Using Context Managers for Device Management
+# Using Context Managers for Device Management
 
-*pasted verbatim from dpctl #12* <sup>[4](#ref4)</sup>
+Using a default or global device is useful to alleviate the need to have
+explicit `device` keyword arguments or `to()` or `copy_()` calls for each array
+creation routine. The global or default device can be changed temporarily with a
+Python context manager or globally. The pattern is found in several Python
+libraries, but is not without flaws. The following excerpts are useful in
+understanding some of the issues.
 
+
+---
 > A context manager for controlling the default device is present in most existing array libraries (NumPy being the exception). There are concerns with using a context manager however. A context manager can be tricky to use at a high level, since it may affect library code below function calls (non-local effects). See, e.g., [this PyTorch issue](https://github.com/pytorch/pytorch/issues/27878) for a discussion on a good context manager API.
 >
 >Adding a context manager may be considered in a future version of this API standard.
 
-*pasted verbatim from* <sup>[5](#ref5)</sup>
+*pasted verbatim from* [\[4\]](#ref4)
 
+---
 >There is one side-effect of with statements: Their effects propagate down the call stack, even into library code. Consider the following code:
 >
 > ```python
@@ -158,6 +165,9 @@ or global device selection strategy should be.
 >
 >Personally, I'd be okay with changing the default value of parallel to `parallel=unspecified`.
 
+*pasted verbatim from dpctl #12* [\[5\]](#ref4)
+
+---
 
 ## References
 
