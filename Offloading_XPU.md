@@ -52,6 +52,7 @@ When data associated with different queues need to be mixed, a copy to make arra
 4. Global Queue Manager (`dpctl`): packages query for the queue to offload to/allocate with.
    1. Essentially equivalent to option 2.
    2. Package authors adopting controls as in option 2 can re-use `dpctl._SyclQueueManager` class.
+5. Another variant of 2/3 is to encapsulate a queue to use in an instance of a class, with functions submitting to the queue defined as methods.
 
 # Addressable ecosystem
 
@@ -65,21 +66,76 @@ Python offload controls should be able to control offload by Python calls to one
 
 # Interoperability considerations
 
+1. Common way to refer to devices to specify data location and computation location.
+2. Sharing data
+
+## Referring to devices
+
+One can use  `dpctl.SyclDevice` instance to specify a device for fine control, or device filter selector to specify root devices.
+
+## Sharing Data
+
 To interoperate Python packages need to be able to shared data.
 
 For host memory, this usually means conversion of between package's respective Python data containers without explicit data copy (hence copy complexity is independent of the data-size).
 
+A protocol is needed to share data. Protocol serves to describe data's structure, access mode, memory domain, etc. Python provides Python buffer protocol for sharing data buffers.
+
 Since USM data are SYCL context bound, packages must either use a common SYCL context, or be able to share a context between each other.
 
-DPCPP was requested by deep learning extension developer teams to implement functionality to get a default single-device context per each SYCL root device. If `pkgA` and `pkgB` use that context offloading to the SYCL device selected using the same device selector, USM data allocated by `pkgA` will be accessible to `pkgB`. 
+### USM sharing protocol
 
-We recommend that USM data are shared using `__sycl_usm_array_interface__`, only that `syclobj` entry  in the interface dictionary can be a device identifier (either a triple of enums for `[backend, device_type, relative_id]`, or a single integer interpreted as a relative id for the backend and device type of the device selected by `sycl::default_selector{}`).
+We recommend that USM data are shared using [`__sycl_usm_array_interface__`](https://github.com/IntelPython/dpctl/wiki/Zero-copy-data-exchange-using-SYCL-USM).. The `syclobj` entry in the interface dictionary server to provide the context to which the USM memory is bound. It can be a `dpctl.SyclContext`, or `dpctl.SyclQueue` instance, or a root device identifier to be used to retrieve the associated default context provided by SYCL runtime.
+
+### Using the default context
+
+DPCPP was requested by deep learning extension developer teams to implement functionality to get a default **single-device** context per each SYCL **root device**. If `pkgA` and `pkgB` use that context when offloading to SYCL devices selected using the same device selector, USM data allocated by `pkgA` will be accessible to `pkgB`. 
+
+**TODO**: USM type implications. All types of USM pointers can be used in SYCL kernels, provided they are bound to the same context as the queue to which kernels are submitted. Data exchanging should allow for copying between containers of different USM types, e.g. it should be possible to copy USM-device PyTorch data into USM-shared DPNP data.
+
+### Explicitly sharing the context
+
+When working with non-root devices, such as sub-devices, or with SYCL contexts encompassing more than one root device it becomes necessary to exchange `SyclContext`  between different Python packages.
 
 For power users who need to share data bound to other contexts, either non-default contexts, or contexts created for sub-devices, SYCL-powered Python ecosystem needs a way to share a context between packages. 
 
 When sharing data in this case, the `__sycl_usm_array_interface__` must currently contain an instance of `dpctl.SyclContext` or `dpctl.SyclQueue`. It has been request that we accommodate passing of named Python capsule with a pointer to a SYCL object. 
 
 `dpctl` should automate working with `__sycl_usm_array_interface__` as much as possible.
+
+### Interoperate beyond SYCL ecosystem
+
+TODO: DLPack
+
+Minimal requirement: Unified way to refer to device, `__sycl_usm_array_interface__` and DLPack.
+Only root devices.
+
+Beyond:
+
+```python
+func(ar1, ar2) # ar1.queue == ar2.queue and computation follows data
+               # func(ar1, ar2.collocate(ar1)) to indicate that compute happens 
+               # on ar1.queue if ar2.queue is different by sycl::context are common.
+```
+
+```
+ar2_c = arLib.asarray(ar2, queue=ar1.queue)
+
+sycl::get_usm_device(ptr, ctx) -> sycl::device
+```
+
+
+
+TODO: what about ITEX ?
+
+TODO: Define what offloading promises, state out of scope cases
+
+```python
+func(ar1_shared, ar2_shared, method='') #  
+```
+
+User programs in DPNP and ITEX, what complications arise. 
+Custom NumPy layers for ITEX/IPEX.
 
 # Examples
 
@@ -224,4 +280,3 @@ A1c = arLib1.asarray(queue=q_used_by_arLib2)
 
 A2 = arLib2.array( A1, device="dev" )
 ```
-
