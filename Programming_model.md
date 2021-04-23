@@ -110,7 +110,7 @@ q1 = dpctl.SyclQueue(ctx, d1)
 a = usm_array(1024, device = q0)
 b = usm_array(1024, device = q1)
 
-a = transfer_ownership(a, device = q1)
+a = usm_array(a, device = q1)
 func(a, b)
 ```
 
@@ -120,8 +120,8 @@ func(a, b)
 a = numpy.ones(1024)
 b = numpy.ones(1024)
 
-a = to_dppy(a, device = "gpu")
-b = to_dppy(b, device = "gpu")
+a = usm_array(a, device = "gpu")
+b = usm_array(b, device = "gpu")
 
 func(a, b)
 ```
