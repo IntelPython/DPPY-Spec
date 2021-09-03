@@ -1,7 +1,7 @@
 **Draft**
 
 # Motivation
-When operating in distributed memory systems a data container (such as tensors or data-frames) may be partitioned into several smaller chunks which might be allocated in distinct (distributed) address spaces. An implementation of operations defined specifically for such a partitioned data container will likely need to use specifics of the structure to provide good performance. Most prominently, making use of the data locality can be vital. For a consumer of such a partitioned container it will be inconvenient (if not impossible) to write specific code for any possible partitioned and distributed data container. On the other hand, like with the array interface, it would be much better to have a standard way of extracting the meta data about the partitioned and distributed nature of a given container.
+When operating in distributed memory systems a data container (such as tensors or data-frames) may be partitioned into several smaller chunks which might be allocated in distinct (distributed) address spaces. An implementation of operations defined specifically for such a partitioned data container will likely need to use specifics of the structure to provide good performance. Most prominently, making use of the data locality can be vital. For a consumer of such a partitioned container it will be inconvenient (if not impossible) to write specific code for any possible partitioned and distributed data container. On the other hand, like with the array/dataframe API interface, it would be much better to have a standard way of extracting the meta data about the partitioned and distributed nature of a given container.
 
 The goal of the `__partitioned__` protocol is to allow partitioned and distributed data containers to expose information to consumers so that unnecessary copying can be avoided as much as possible.
 
@@ -51,11 +51,11 @@ In addition to the above required keys a container is encouraged to provide more
   * The actual data of the partition, potentially provided as a handle.
   * All data/partitions must be of the same type.
   * The actual partition type is opaque to the `__partitioned__`
-    * The consumer needs to deal with it like it would in a non-partitioned case. For example, if the consumer can deal with array it could check for the existence of the array interface. Other conforming consumers could hard-code a very specific type check.
+    * The consumer needs to deal with it like it would in a non-partitioned case. For example, if the consumer can deal with array it could check for the existence of the array/dataframe APIs (https://github.com/data-apis/array-api, https://github.com/data-apis/dataframe-api). Other conforming consumers could hard-code a very specific type check.
     * Whenever possible the data should be provided as references. References are mandatory of non-SPMD backedns. This avoids unnecessary data movement.
       * Ray: ray.ObjectRef
       * Dask: dask.Future
-    * It is recommended to access the actual data through the callable in the 'get' field of `__partitioned__`. This allows consumers to avoid differentiating between different handle types and type checks can be limited to basic types like pandas.DataFrame and numpy.ndarray.
+    * It is recommended to access the actual data through the callable in the 'get' field of `__partitioned__`. This allows consumers to avoid checking handle types and container types.
 
   * For SPMD-MPI-like backends: partitions which are not locally available may be `None`. This is the recommended behavior unless the underlying backend supports references (such as promises/futures) to avoid unnecessary data movement.
 * `location`
@@ -66,7 +66,7 @@ In addition to the above required keys a container is encouraged to provide more
     * SPMD/MPI-like frameworks such as MPI, SHMEM etc.: rank
 
 ## `get`
-A callable must return raw data object when called with a handle (or sequence of handles) provided in the `data` field of an entry in `partition`. Raw data objects are standard data structures like pandas.DataFrame and numpy.ndarray.
+A callable must return raw data object when called with a handle (or sequence of handles) provided in the `data` field of an entry in `partition`. Raw data objects are standard data structures: DataFrame or nd-array.
 
 ## `locals`
 The short-cut for SPMD environments allows processes/ranks to quickly extract their local partition. It saves processes from parsing the `partitions` dictionary for the local rank/address which is helpful when the number of ranks/processes/PEs is large.
@@ -130,7 +130,7 @@ __partitioned_interface__ = {
         'data': future3,
         'location': ['1.1.1.2:55667’], },
   }
-  'get': lambda x: x.result()
+  'get': lambda x: distributed.get_client().gather(x)
 }
 ```
 ### 2d-structure (64 elements), 1d-partition-grid, 4 partitions on 2 ranks, row-block-cyclic distribution, partitions are of type `pandas.DataFrame`, MPI
