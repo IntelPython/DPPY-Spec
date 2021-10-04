@@ -12,6 +12,7 @@ Data should have the following retreivable attribute:
 ---
 1. Users are not allowed to mix arrays with different SYCL queues.
 ```
+@numba_dppy.kernel
 def f(a, b, c):
 	d = c * b
 	e = a + d
@@ -35,6 +36,7 @@ f(a, b, c)
    using the same SYCL queue.
    Considerations: Packages should warn about performance penalty when users mix usm-type. 
 ```
+@numba_dppy.kernel
 def f(a, b, c):
 	d = c * b
 	e = a + d
@@ -49,13 +51,14 @@ f(a, b, c)
 ```
 3. Packages need to provide the following functions to make data compatible for compute follows data:
 ```
-data.to(queue, usm_type="device")
+data.as_array(queue, usm_type="device")
 # OR
-pkg.trasnfer_to(data, queue, usm_type="device")
+pkg.as_array(data, queue, usm_type="device")
 ```
 E.g.
 
 ```
+@numba_dppy.kernel
 def f(a, b, c):
 	d = c * b
 	e = a + d
@@ -69,14 +72,16 @@ c = dpctl.tensor.usm_ndarray([1, 2, 3, 4], type="device", queue="gpu_queue_2")
 f(a, b, c)
 
 # Users can use explicit conversion function to make data compatible
-a_queue_2 = dpctl.transfer_to(a, queue="gpu_queue_1") # potentially zero-copy
+a_queue_2 = dpctl.as_array(a, queue="gpu_queue_2") # potentially zero-copy
 
 # f() will be offloaded to "gpu_queue_2"
 f(a_queue_2, b, c)
 ```
 
-Output matrix:
-device < shared < host
+### Output type inference for @numba.njit
+---
+Precedence of usm-type: `device < shared < host`
+
 ```markdown
 |        | Device | Shared | Host   |
 |--------|--------|--------|--------|
