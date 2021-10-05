@@ -91,14 +91,13 @@ a = numpy.as_array([1, 2, 3, 4])
 b = numpy.as_array([1, 2, 3, 4])
 c = numpy.as_array([1, 2, 3, 4])
 
-# This will result in error as the queue to submit the kernel on can not be determined
+# This will result in error as the queue to submit the kernel can not be determined
 f(a, b, c)
 
-# Users will have to use numba_dppy's context manager to specofy the SYCL queue
+# Users will have to use numba_dppy's context manager to specify the SYCL queue
 # f() will be offloaded to "gpu_queue"
 with numba_dppy.offload_to_sycl_device("gpu_queue"):
 	f(a, b, c)
-
 ```
 
 2. Users are not allowed to mix `numpy.ndarray` and `dpctl.tensor.usm_ndarray`.
@@ -113,16 +112,18 @@ b = numpy.as_array([1, 2, 3, 4])
 c = dpctl.tensor.usm_ndarray([1, 2, 3, 4], type="device", queue="gpu_queue_2")
 
 
-# This will result in error as the queue to submit the kernel on can not be determined
+# This will result in error as the queue to submit the kernel can not be determined
 f(a, b, c)
 
-# This will also result in error as the queue to submit the kernel on can not be determined
+# This will also result in error as the queue to submit the kernel can not be determined
+
 with numba_dppy.offload_to_sycl_device("gpu_queue"):
 	f(a, b, c)
 
 # This will also result in error. Although, the SYCL queue "gpu_queue_2" can be used to copy
 # the numpy.ndarray data and to submit the kernel, it breaks the compute follows data as 
 # inferring the SYCL queue can not be accomplished for data a and b.
+
 with numba_dppy.offload_to_sycl_device("gpu_queue_2"):
 	f(a, b, c)
 ```
