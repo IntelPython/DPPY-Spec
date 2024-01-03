@@ -1,2 +1,2 @@
 # DPPY-Spec
-Draft specifications of DPPY
+Draft technical specifications for the Data-parallel extensions for Python.
